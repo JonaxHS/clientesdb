@@ -5,25 +5,27 @@ import { useState } from 'react';
 interface Client {
     id: string;
     name: string | null;
-    hikvision_user: string | null;
-    hikvision_pass: string | null;
-    google_email: string | null;
-    google_pass: string | null;
-    ewelink_user: string | null;
-    ewelink_pass: string | null;
     domotics_notes: string | null;
     latitude: number | null;
     longitude: number | null;
     createdAt: string;
+    accounts: {
+        id: string;
+        username: string | null;
+        password: string | null;
+        notes: string | null;
+        provider: {
+            id: string;
+            name: string;
+        }
+    }[];
 }
 
 function ClientCard({ client }: { client: Client }) {
     const [open, setOpen] = useState(false);
 
     const title = client.name ||
-        client.hikvision_user ||
-        client.google_email ||
-        client.ewelink_user ||
+        (client.accounts.length > 0 ? client.accounts[0].username : null) ||
         `Cliente ${client.id.slice(0, 6)}`;
 
     const date = new Date(client.createdAt).toLocaleDateString('es-MX', {
@@ -48,24 +50,17 @@ function ClientCard({ client }: { client: Client }) {
 
             {open && (
                 <div className="client-details">
-                    {client.hikvision_user && (
-                        <div className="detail-group">
-                            <span className="label">🎥 Hikvision</span>
-                            <span className="value">{client.hikvision_user} / <code>{client.hikvision_pass}</code></span>
+                    {client.accounts.map(acc => (
+                        <div key={acc.id} className="detail-group" style={{ marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '1px dashed #ced4da' }}>
+                            <span className="label" style={{ fontWeight: 'bold', display: 'block', marginBottom: '0.25rem', color: '#1c7ed6' }}>
+                                🏷️ {acc.provider.name}
+                            </span>
+                            <span className="value" style={{ display: 'block', marginBottom: '0.25rem' }}>
+                                {acc.username || '-'} / <code>{acc.password || '-'}</code>
+                            </span>
+                            {acc.notes && <span className="value" style={{ fontSize: '0.85rem', color: '#666', fontStyle: 'italic' }}>{acc.notes}</span>}
                         </div>
-                    )}
-                    {client.google_email && (
-                        <div className="detail-group">
-                            <span className="label">🔵 Google</span>
-                            <span className="value">{client.google_email} / <code>{client.google_pass}</code></span>
-                        </div>
-                    )}
-                    {client.ewelink_user && (
-                        <div className="detail-group">
-                            <span className="label">⚡ eWeLink</span>
-                            <span className="value">{client.ewelink_user} / <code>{client.ewelink_pass}</code></span>
-                        </div>
-                    )}
+                    ))}
                     {client.domotics_notes && (
                         <div className="detail-group">
                             <span className="label">📝 Notas</span>

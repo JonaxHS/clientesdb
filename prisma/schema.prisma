@@ -11,13 +11,9 @@ datasource db {
 model Client {
   id             String   @id @default(uuid())
   name           String?
-  hikvision_user String?
-  hikvision_pass String?
-  google_email   String?
-  google_pass    String?
-  ewelink_user   String?
-  ewelink_pass   String?
   domotics_notes String?
+
+  accounts       Account[]
 
   latitude       Float?
   longitude      Float?
@@ -29,4 +25,27 @@ model Client {
 model Setting {
   key   String @id
   value String
+}
+
+model Provider {
+  id        String    @id @default(uuid())
+  name      String    @unique
+  accounts  Account[]
+  createdAt DateTime  @default(now())
+}
+
+model Account {
+  id         String   @id @default(uuid())
+  username   String?
+  password   String?
+  notes      String?
+
+  clientId   String
+  client     Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  providerId String
+  provider   Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }

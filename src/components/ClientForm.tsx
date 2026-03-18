@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 
@@ -10,19 +10,49 @@ export default function ClientForm() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [geoStatus, setGeoStatus] = useState('');
-    const [showMap, setShowMap] = useState(true); // Show map by default
+    const [showMap, setShowMap] = useState(true);
 
+    const [providers, setProviders] = useState<{ id: string, name: string }[]>([]);
+
+    // Nueva estructura de estado
     const [formData, setFormData] = useState({
         name: '',
-        hikvision_user: '', hikvision_pass: '',
-        google_email: '', google_pass: '',
-        ewelink_user: '', ewelink_pass: '',
         domotics_notes: '',
-        latitude: '', longitude: ''
+        latitude: '', longitude: '',
+        accounts: [] as { providerId: string, username: '', password: '', notes: '' }[]
     });
+
+    useEffect(() => {
+        const fetchProviders = async () => {
+            const res = await fetch('/api/providers');
+            if (res.ok) {
+                setProviders(await res.json());
+            }
+        };
+        fetchProviders();
+    }, []);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    const handleAddAccount = () => {
+        setFormData(prev => ({
+            ...prev,
+            accounts: [...prev.accounts, { providerId: '', username: '', password: '', notes: '' }]
+        }));
+    };
+
+    const handleAccountChange = (index: number, field: string, value: string) => {
+        const newAccounts = [...formData.accounts];
+        (newAccounts[index] as any)[field] = value;
+        setFormData({ ...formData, accounts: newAccounts });
+    };
+
+    const handleRemoveAccount = (index: number) => {
+        const newAccounts = [...formData.accounts];
+        newAccounts.splice(index, 1);
+        setFormData({ ...formData, accounts: newAccounts });
     };
 
     const obtainAutoLocation = () => {
@@ -71,9 +101,7 @@ export default function ClientForm() {
             });
             if (res.ok) {
                 setFormData({
-                    name: '', hikvision_user: '', hikvision_pass: '',
-                    google_email: '', google_pass: '', ewelink_user: '',
-                    ewelink_pass: '', domotics_notes: '', latitude: '', longitude: ''
+                    name: '', domotics_notes: '', latitude: '', longitude: '', accounts: []
                 });
                 setGeoStatus('');
                 router.refresh();
@@ -92,42 +120,66 @@ export default function ClientForm() {
                 <input type="text" name="name" value={formData.name} onChange={handleChange} placeholder="Ej: Casa García, Oficina 3B..." />
             </div>
 
-            <div className="form-row">
-                <div className="form-group">
-                    <label>Hikvision Usuario</label>
-                    <input type="text" name="hikvision_user" value={formData.hikvision_user} onChange={handleChange} placeholder="admin" />
+            <div className="accounts-section full-width card-inner" style={{ marginTop: '1rem', marginBottom: '1rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                    <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#2c3e50' }}>🔑 Cuentas y Credenciales</h3>
+                    <button type="button" onClick={handleAddAccount} className="button-primary btn-sm" style={{ padding: '0.4rem 0.8rem' }}>
+                        + Añadir Cuenta
+                    </button>
                 </div>
-                <div className="form-group">
-                    <label>Hikvision Contraseña</label>
-                    <input type="text" name="hikvision_pass" value={formData.hikvision_pass} onChange={handleChange} />
-                </div>
-            </div>
 
-            <div className="form-row">
-                <div className="form-group">
-                    <label>Google Correo</label>
-                    <input type="email" name="google_email" value={formData.google_email} onChange={handleChange} placeholder="correo@gmail.com" />
-                </div>
-                <div className="form-group">
-                    <label>Google Contraseña</label>
-                    <input type="text" name="google_pass" value={formData.google_pass} onChange={handleChange} />
-                </div>
-            </div>
+                {formData.accounts.length === 0 ? (
+                    <p style={{ color: '#666', fontStyle: 'italic', fontSize: '0.9rem', textAlign: 'center', padding: '1rem', background: '#f8f9fa', borderRadius: '4px' }}>
+                        No hay cuentas agregadas. Haz clic en "Añadir Cuenta".
+                    </p>
+                ) : (
+                    formData.accounts.map((acc, idx) => (
+                        <div key={idx} className="account-card" style={{ background: '#f8f9fa', border: '1px solid #e9ecef', borderRadius: '6px', padding: '1rem', marginBottom: '1rem', position: 'relative' }}>
+                            <button
+                                type="button"
+                                onClick={() => handleRemoveAccount(idx)}
+                                style={{ position: 'absolute', top: '10px', right: '10px', background: 'none', border: 'none', color: '#fa5252', cursor: 'pointer', fontSize: '1.2rem', fontWeight: 'bold' }}
+                                title="Eliminar cuenta"
+                            >×</button>
 
-            <div className="form-row">
-                <div className="form-group">
-                    <label>eWeLink Usuario</label>
-                    <input type="text" name="ewelink_user" value={formData.ewelink_user} onChange={handleChange} />
-                </div>
-                <div className="form-group">
-                    <label>eWeLink Contraseña</label>
-                    <input type="text" name="ewelink_pass" value={formData.ewelink_pass} onChange={handleChange} />
-                </div>
+                            <div className="form-group full-width" style={{ marginBottom: '0.75rem' }}>
+                                <label style={{ fontSize: '0.85rem' }}>Proveedor</label>
+                                <select
+                                    value={acc.providerId}
+                                    onChange={e => handleAccountChange(idx, 'providerId', e.target.value)}
+                                    style={{ width: '100%', padding: '0.6rem', border: '1px solid #ced4da', borderRadius: '4px', background: 'white' }}
+                                    required
+                                >
+                                    <option value="" disabled>Selecciona un proveedor...</option>
+                                    {providers.map(p => (
+                                        <option key={p.id} value={p.id}>{p.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="form-row" style={{ gap: '0.75rem', marginBottom: '0.75rem' }}>
+                                <div className="form-group" style={{ margin: 0 }}>
+                                    <label style={{ fontSize: '0.85rem' }}>Usuario / Email</label>
+                                    <input type="text" value={acc.username} onChange={e => handleAccountChange(idx, 'username', e.target.value)} placeholder="usuario" />
+                                </div>
+                                <div className="form-group" style={{ margin: 0 }}>
+                                    <label style={{ fontSize: '0.85rem' }}>Contraseña</label>
+                                    <input type="text" value={acc.password} onChange={e => handleAccountChange(idx, 'password', e.target.value)} placeholder="contraseña" />
+                                </div>
+                            </div>
+
+                            <div className="form-group full-width" style={{ margin: 0 }}>
+                                <label style={{ fontSize: '0.85rem' }}>Notas adicionales (opcional)</label>
+                                <input type="text" value={acc.notes} onChange={e => handleAccountChange(idx, 'notes', e.target.value)} placeholder="PIN, Notas, etc." style={{ padding: '0.5rem' }} />
+                            </div>
+                        </div>
+                    ))
+                )}
             </div>
 
             <div className="form-group full-width">
-                <label>Notas Extra Domótica</label>
-                <textarea name="domotics_notes" value={formData.domotics_notes} onChange={handleChange} rows={2} placeholder="Contraseñas WiFi, notas adicionales..."></textarea>
+                <label>Notas Globales del Proyecto</label>
+                <textarea name="domotics_notes" value={formData.domotics_notes} onChange={handleChange} rows={2} placeholder="Descripción general, equipos instalados..."></textarea>
             </div>
 
             <div className="location-section full-width card-inner">

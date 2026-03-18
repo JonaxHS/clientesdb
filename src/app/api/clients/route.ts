@@ -6,7 +6,14 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
     try {
         const clients = await prisma.client.findMany({
-            orderBy: { createdAt: 'desc' }
+            orderBy: { createdAt: 'desc' },
+            include: {
+                accounts: {
+                    include: {
+                        provider: true
+                    }
+                }
+            }
         });
         return NextResponse.json(clients);
     } catch (error) {
@@ -18,21 +25,50 @@ export async function GET() {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const newClient = await prisma.client.create({
-            data: {
-                name: body.name,
-                hikvision_user: body.hikvision_user,
-                hikvision_pass: body.hikvision_pass,
-                google_email: body.google_email,
-                google_pass: body.google_pass,
-                ewelink_user: body.ewelink_user,
-                ewelink_pass: body.ewelink_pass,
-                domotics_notes: body.domotics_notes,
-                latitude: body.latitude ? parseFloat(body.latitude) : null,
-                longitude: body.longitude ? parseFloat(body.longitude) : null,
-            }
-        });
-        return NextResponse.json(newClient, { status: 201 });
+
+        const validAccounts = body.accounts ? body.accounts.filter((a: any) => a.providerId) : [];
+        const accountsPayload = validAccounts.map((acct: any) => ({
+            providerId: acct.providerId,
+            username: acct.username || null,
+            password: acct.password || null,
+            notes: acct.notes || null,
+        }));
+
+        let client;
+
+        if (body.id) {
+            // Eliminar cuentas previas
+            await prisma.account.deleteMany({
+                where: { clientId: body.id }
+            });
+
+            client = await prisma.client.update({
+                where: { id: body.id },
+                data: {
+                    name: body.name,
+                    domotics_notes: body.domotics_notes,
+                    latitude: body.latitude ? parseFloat(body.latitude) : null,
+                    longitude: body.longitude ? parseFloat(body.longitude) : null,
+                    accounts: {
+                        create: accountsPayload
+                    }
+                }
+            });
+        } else {
+            client = await prisma.client.create({
+                data: {
+                    name: body.name,
+                    domotics_notes: body.domotics_notes,
+                    latitude: body.latitude ? parseFloat(body.latitude) : null,
+                    longitude: body.longitude ? parseFloat(body.longitude) : null,
+                    accounts: {
+                        create: accountsPayload
+                    }
+                }
+            });
+        }
+
+        return NextResponse.json(client, { status: 201 });
     } catch (error) {
         console.error('Failed to create client', error);
         return NextResponse.json({ error: 'Failed to create client' }, { status: 500 });

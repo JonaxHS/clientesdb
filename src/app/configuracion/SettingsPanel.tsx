@@ -13,6 +13,12 @@ export default function SettingsPanel() {
     const [showSslHelp, setShowSslHelp] = useState(false);
     const [showCaddyConf, setShowCaddyConf] = useState(false);
 
+    // Providers state
+    const [providers, setProviders] = useState<{ id: string, name: string }[]>([]);
+    const [newProvider, setNewProvider] = useState('');
+    const [providerStatus, setProviderStatus] = useState('');
+    const [providerLoading, setProviderLoading] = useState(false);
+
     const loadSettings = useCallback(async () => {
         try {
             const res = await fetch('/api/configuracion');
@@ -20,6 +26,13 @@ export default function SettingsPanel() {
                 const data = await res.json();
                 setDomain(data.domain || '');
                 setSsl(data.ssl_enabled === 'true');
+            }
+
+            // Load providers
+            const provRes = await fetch('/api/providers');
+            if (provRes.ok) {
+                const provData = await provRes.json();
+                setProviders(provData);
             }
         } catch { /* ignore */ }
     }, []);
@@ -47,6 +60,45 @@ export default function SettingsPanel() {
             setStatus('❌ Error de conexión.');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleAddProvider = async () => {
+        if (!newProvider.trim()) return;
+        setProviderLoading(true);
+        setProviderStatus('');
+        try {
+            const res = await fetch('/api/providers', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: newProvider })
+            });
+            if (res.ok) {
+                setProviderStatus('✅ Proveedor agregado');
+                setNewProvider('');
+                loadSettings(); // reload list
+            } else {
+                const data = await res.json();
+                setProviderStatus(`❌ Error: ${data.error || 'No se pudo agregar'}`);
+            }
+        } catch {
+            setProviderStatus('❌ Error de red');
+        } finally {
+            setProviderLoading(false);
+        }
+    };
+
+    const handleDeleteProvider = async (id: string) => {
+        if (!confirm('¿Estás seguro de eliminar este proveedor? Sus cuentas asociadas en los clientes se verán afectadas.')) return;
+        try {
+            const res = await fetch(`/api/providers?id=${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                loadSettings();
+            } else {
+                alert('No se pudo eliminar el proveedor.');
+            }
+        } catch {
+            alert('Error de conexión.');
         }
     };
 
@@ -112,6 +164,51 @@ export default function SettingsPanel() {
                 >
                     {showCaddyConf ? 'Ocultar config' : '🔍 Ver config actual'}
                 </button>
+            </div>
+
+            {/* Providers Section */}
+            <div className="settings-card card">
+                <h3>💼 Proveedores de Cuentas</h3>
+                <p className="settings-desc">Administra los proveedores de servicios (ej: Hikvision, Google, Netflix, Spotify). Así podrás asignar cuentas de estos proveedores a tus clientes.</p>
+
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+                    <input
+                        type="text"
+                        value={newProvider}
+                        onChange={e => setNewProvider(e.target.value)}
+                        placeholder="Nuevo proveedor (ej: Netflix)"
+                        style={{ flex: 1, padding: '0.5rem', borderRadius: '4px', border: '1px solid #ddd' }}
+                        onKeyDown={e => e.key === 'Enter' && handleAddProvider()}
+                    />
+                    <button
+                        onClick={handleAddProvider}
+                        disabled={providerLoading || !newProvider.trim()}
+                        className="button-primary"
+                        style={{ padding: '0.5rem 1rem' }}
+                    >
+                        {providerLoading ? '...' : 'Añadir'}
+                    </button>
+                </div>
+                {providerStatus && <p className="status-message" style={{ marginTop: '0.5rem', fontSize: '0.9rem' }}>{providerStatus}</p>}
+
+                <div className="providers-list" style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {providers.length === 0 ? (
+                        <p style={{ color: '#666', fontStyle: 'italic', fontSize: '0.9rem' }}>No hay proveedores configurados.</p>
+                    ) : (
+                        providers.map(p => (
+                            <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', backgroundColor: '#f8f9fa', borderRadius: '4px', border: '1px solid #e9ecef' }}>
+                                <span style={{ fontWeight: 500 }}>{p.name}</span>
+                                <button
+                                    onClick={() => handleDeleteProvider(p.id)}
+                                    className="button-danger"
+                                    style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem', backgroundColor: '#ffe3e3', color: '#e03131', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                                >
+                                    Eliminar
+                                </button>
+                            </div>
+                        ))
+                    )}
+                </div>
             </div>
 
             <div className="settings-card card">
