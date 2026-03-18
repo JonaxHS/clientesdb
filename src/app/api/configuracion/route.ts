@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 import { cookies } from 'next/headers';
 import { writeFileSync } from 'fs';
 import { getExpectedToken } from '@/lib/auth';
 import { generateNginxConf } from '@/lib/nginx';
+import prisma from '@/lib/prisma';
 
-const prisma = new PrismaClient();
 export const dynamic = 'force-dynamic';
 
 function isAuthenticated(): boolean {
