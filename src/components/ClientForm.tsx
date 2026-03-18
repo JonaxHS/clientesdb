@@ -4,7 +4,17 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 
-const MapPicker = dynamic(() => import('./MapPicker'), { ssr: false });
+const MapPicker = dynamic(() => import('./MapPicker'), {
+    ssr: false,
+    loading: () => <div style={{ height: '300px', background: 'rgba(0,0,0,0.1)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Cargando mapa...</div>
+}) as React.ComponentType<{
+    lat: number | null;
+    lng: number | null;
+    onLocationSelect: (lat: number, lng: number, address?: string) => void;
+    height?: string;
+    clients?: { id: string, name: string | null, lat: number, lng: number }[];
+    showUserLocation?: boolean;
+}>;
 
 export default function ClientForm() {
     const router = useRouter();
@@ -13,23 +23,27 @@ export default function ClientForm() {
     const [showMap, setShowMap] = useState(true);
 
     const [providers, setProviders] = useState<{ id: string, name: string }[]>([]);
+    const [allClients, setAllClients] = useState<any[]>([]);
 
     // Nueva estructura de estado
     const [formData, setFormData] = useState({
         name: '',
         domotics_notes: '',
+        address: '',
         latitude: '', longitude: '',
         accounts: [] as { providerId: string, username: '', password: '', notes: '' }[]
     });
 
     useEffect(() => {
-        const fetchProviders = async () => {
-            const res = await fetch('/api/providers');
-            if (res.ok) {
-                setProviders(await res.json());
-            }
+        const fetchData = async () => {
+            const [pRes, cRes] = await Promise.all([
+                fetch('/api/providers'),
+                fetch('/api/clients')
+            ]);
+            if (pRes.ok) setProviders(await pRes.json());
+            if (cRes.ok) setAllClients(await cRes.json());
         };
-        fetchProviders();
+        fetchData();
     }, []);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -85,8 +99,13 @@ export default function ClientForm() {
         );
     };
 
-    const handleMapLocation = (lat: number, lng: number) => {
-        setFormData(prev => ({ ...prev, latitude: lat.toString(), longitude: lng.toString() }));
+    const handleMapLocation = (lat: number, lng: number, address?: string) => {
+        setFormData(prev => ({
+            ...prev,
+            latitude: lat.toString(),
+            longitude: lng.toString(),
+            address: address || prev.address
+        }));
         setGeoStatus('✅ Ubicación seleccionada en mapa.');
     };
 
@@ -101,10 +120,13 @@ export default function ClientForm() {
             });
             if (res.ok) {
                 setFormData({
-                    name: '', domotics_notes: '', latitude: '', longitude: '', accounts: []
+                    name: '', domotics_notes: '', address: '', latitude: '', longitude: '', accounts: []
                 });
                 setGeoStatus('');
                 router.refresh();
+                // Refresh clients list to show the new one as a marker next time
+                const cRes = await fetch('/api/clients');
+                if (cRes.ok) setAllClients(await cRes.json());
             }
         } catch (err) {
             console.error(err);
@@ -112,6 +134,11 @@ export default function ClientForm() {
             setLoading(false);
         }
     };
+
+    // Client markers for the map
+    const clientMarkers = allClients
+        .filter(c => c.latitude && c.longitude)
+        .map(c => ({ id: c.id, name: c.name, lat: c.latitude!, lng: c.longitude! }));
 
     return (
         <form onSubmit={handleSubmit} className="client-form">
@@ -122,19 +149,19 @@ export default function ClientForm() {
 
             <div className="accounts-section full-width card-inner" style={{ marginTop: '1rem', marginBottom: '1rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                    <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#2c3e50' }}>🔑 Cuentas y Credenciales</h3>
+                    <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-primary)' }}>🔑 Cuentas y Credenciales</h3>
                     <button type="button" onClick={handleAddAccount} className="button-primary btn-sm" style={{ padding: '0.4rem 0.8rem' }}>
                         + Añadir Cuenta
                     </button>
                 </div>
 
                 {formData.accounts.length === 0 ? (
-                    <p style={{ color: '#666', fontStyle: 'italic', fontSize: '0.9rem', textAlign: 'center', padding: '1rem', background: '#f8f9fa', borderRadius: '4px' }}>
+                    <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic', fontSize: '0.9rem', textAlign: 'center', padding: '1rem', background: 'rgba(0,0,0,0.1)', borderRadius: '4px' }}>
                         No hay cuentas agregadas. Haz clic en &quot;Añadir Cuenta&quot;.
                     </p>
                 ) : (
                     formData.accounts.map((acc, idx) => (
-                        <div key={idx} className="account-card" style={{ background: '#f8f9fa', border: '1px solid #e9ecef', borderRadius: '6px', padding: '1rem', marginBottom: '1rem', position: 'relative' }}>
+                        <div key={idx} className="account-card" style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', borderRadius: '6px', padding: '1rem', marginBottom: '1rem', position: 'relative' }}>
                             <button
                                 type="button"
                                 onClick={() => handleRemoveAccount(idx)}
@@ -147,7 +174,7 @@ export default function ClientForm() {
                                 <select
                                     value={acc.providerId}
                                     onChange={e => handleAccountChange(idx, 'providerId', e.target.value)}
-                                    style={{ width: '100%', padding: '0.6rem', border: '1px solid #ced4da', borderRadius: '4px', background: 'white' }}
+                                    style={{ width: '100%', padding: '0.6rem', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
                                     required
                                 >
                                     <option value="" disabled>Selecciona un proveedor...</option>
@@ -186,9 +213,6 @@ export default function ClientForm() {
                 <div className="location-header">
                     <h3>📍 Geolocalización</h3>
                     <div className="location-actions">
-                        <button type="button" onClick={obtainAutoLocation} className="button-primary btn-sm">
-                            Auto Detectar
-                        </button>
                         <button type="button" onClick={() => setShowMap(!showMap)} className="button-secondary btn-sm">
                             {showMap ? 'Ocultar Mapa' : 'Ver Mapa'}
                         </button>
@@ -196,6 +220,11 @@ export default function ClientForm() {
                 </div>
 
                 {geoStatus && <p className="status-message">{geoStatus}</p>}
+
+                <div className="form-group full-width" style={{ marginBottom: '1rem' }}>
+                    <label>Dirección (autogenerada o manual)</label>
+                    <input type="text" name="address" value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} placeholder="Calle, ciudad..." />
+                </div>
 
                 <div className="form-row coords-preview">
                     <div className="form-group">
@@ -209,11 +238,14 @@ export default function ClientForm() {
                 </div>
 
                 {showMap && (
-                    <div className="map-container-wrapper">
+                    <div className="map-container-wrapper" style={{ height: '350px' }}>
                         <MapPicker
                             lat={formData.latitude ? parseFloat(formData.latitude) : null}
                             lng={formData.longitude ? parseFloat(formData.longitude) : null}
                             onLocationSelect={handleMapLocation}
+                            clients={clientMarkers}
+                            showUserLocation={true}
+                            height="100%"
                         />
                     </div>
                 )}

@@ -12,6 +12,7 @@ model Client {
   id             String   @id @default(uuid())
   name           String?
   domotics_notes String?
+  address        String?
 
   accounts       Account[]
 

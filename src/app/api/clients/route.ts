@@ -47,6 +47,7 @@ export async function POST(request: Request) {
                 data: {
                     name: body.name,
                     domotics_notes: body.domotics_notes,
+                    address: body.address,
                     latitude: body.latitude ? parseFloat(body.latitude) : null,
                     longitude: body.longitude ? parseFloat(body.longitude) : null,
                     accounts: {
@@ -59,6 +60,7 @@ export async function POST(request: Request) {
                 data: {
                     name: body.name,
                     domotics_notes: body.domotics_notes,
+                    address: body.address,
                     latitude: body.latitude ? parseFloat(body.latitude) : null,
                     longitude: body.longitude ? parseFloat(body.longitude) : null,
                     accounts: {

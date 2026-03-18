@@ -20,6 +20,7 @@ interface Client {
     domotics_notes: string | null;
     latitude: number | null;
     longitude: number | null;
+    address: string | null;
     createdAt: string;
     accounts: Account[];
 }
@@ -51,9 +52,9 @@ function EditModal({ client, providers, onClose, onSaved }: {
 }) {
     const [name, setName] = useState(client.name || '');
     const [notes, setNotes] = useState(client.domotics_notes || '');
+    const [address, setAddress] = useState(client.address || '');
     const [lat, setLat] = useState(client.latitude?.toString() || '');
     const [lng, setLng] = useState(client.longitude?.toString() || '');
-    const [showMap, setShowMap] = useState(false);
     const [accounts, setAccounts] = useState<EditAccount[]>(
         client.accounts.map(a => ({
             providerId: a.provider.id,
@@ -83,6 +84,7 @@ function EditModal({ client, providers, onClose, onSaved }: {
                 domotics_notes: notes,
                 latitude: lat,
                 longitude: lng,
+                address,
                 accounts
             })
         });
@@ -131,20 +133,26 @@ function EditModal({ client, providers, onClose, onSaved }: {
                         <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="WiFi, descripción..." />
                     </div>
 
-                    <div className="form-group full-width">
-                        <button type="button" className="button-secondary btn-sm" onClick={() => setShowMap(v => !v)}>
-                            {showMap ? 'Ocultar mapa' : '🗺️ Cambiar ubicación'}
-                        </button>
+                    <div className="form-group full-width" style={{ marginBottom: '1rem' }}>
+                        <label>Dirección</label>
+                        <input value={address} onChange={e => setAddress(e.target.value)} placeholder="Calle, ciudad..." />
                     </div>
-                    {showMap && (
-                        <div style={{ height: '250px', borderRadius: '8px', overflow: 'hidden', marginBottom: '1rem' }}>
-                            <MapPicker
-                                lat={lat ? parseFloat(lat) : null}
-                                lng={lng ? parseFloat(lng) : null}
-                                onLocationSelect={(la, ln) => { setLat(la.toString()); setLng(ln.toString()); }}
-                            />
-                        </div>
-                    )}
+
+                    {/* Map — always visible for location editing */}
+                    <div className="form-group full-width">
+                        <label style={{ marginBottom: '0.4rem', display: 'block' }}>� Ubicación — toca el mapa para mover el PIN</label>
+                        <MapPicker
+                            lat={lat ? parseFloat(lat) : null}
+                            lng={lng ? parseFloat(lng) : null}
+                            onLocationSelect={(la, ln, addr) => {
+                                setLat(la.toString());
+                                setLng(ln.toString());
+                                if (addr) setAddress(addr);
+                            }}
+                            height="240px"
+                            showUserLocation={true}
+                        />
+                    </div>
                 </div>
                 <div className="modal-footer">
                     <button onClick={onClose} className="button-secondary">Cancelar</button>
@@ -303,6 +311,13 @@ export default function ClientList() {
         ? clientsWithDistance.filter(c => c.distance !== undefined && c.distance <= NEARBY_RADIUS_KM).length
         : 0;
 
+    // Build markers for map overview
+    const clientMarkers = allClients
+        .filter(c => c.latitude && c.longitude)
+        .map(c => ({ id: c.id, name: c.name, lat: c.latitude!, lng: c.longitude! }));
+
+    const [showMapOverview, setShowMapOverview] = useState(false);
+
     return (
         <div className="clients-list-wrapper">
             {geoStatus === 'locating' && <div className="geo-banner geo-locating">📡 Obteniendo tu ubicación...</div>}
@@ -310,6 +325,31 @@ export default function ClientList() {
                 <div className="geo-banner geo-found">📍 {nearbyCount} clientes cerca de ti (radio {NEARBY_RADIUS_KM} km)</div>
             )}
             {geoStatus === 'denied' && <div className="geo-banner geo-denied">⚠️ Sin acceso a ubicación — mostrando todos</div>}
+
+            {/* Map Overview */}
+            {clientMarkers.length > 0 && (
+                <div style={{ marginBottom: '1rem' }}>
+                    <button
+                        onClick={() => setShowMapOverview(v => !v)}
+                        style={{ width: '100%', padding: '0.55rem 1rem', background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: '8px', color: '#93C5FD', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                    >
+                        <span>🗺️ Mapa de clientes ({clientMarkers.length} ubicaciones)</span>
+                        <span style={{ fontSize: '1.1rem' }}>{showMapOverview ? '⨉' : '▾'}</span>
+                    </button>
+                    {showMapOverview && (
+                        <div style={{ marginTop: '0.5rem', borderRadius: '10px', overflow: 'hidden' }}>
+                            <MapPicker
+                                lat={userLocation?.lat ?? null}
+                                lng={userLocation?.lng ?? null}
+                                onLocationSelect={() => { }}
+                                height="300px"
+                                clients={clientMarkers}
+                                showUserLocation={true}
+                            />
+                        </div>
+                    )}
+                </div>
+            )}
 
             <div className="list-controls">
                 <input type="text" className="search-input" placeholder="🔍 Buscar por nombre..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
@@ -324,8 +364,8 @@ export default function ClientList() {
                 <p className="empty-state">⏳ Cargando...</p>
             ) : displayed.length === 0 ? (
                 <p className="empty-state">
-                    {query ? `Sin resultados para &quot;${query}&quot;`
-                        : !showAll && geoStatus === 'found' ? `Sin clientes en ${NEARBY_RADIUS_KM} km — toca &quot;Todos&quot;`
+                    {query ? `Sin resultados para "${query}"`
+                        : !showAll && geoStatus === 'found' ? `Sin clientes en ${NEARBY_RADIUS_KM} km — toca "Todos"`
                             : 'No hay clientes aún.'}
                 </p>
             ) : (
