@@ -20,6 +20,7 @@ export default async function Home() {
         <div className="header-logo">🔐</div>
         <h1>ClientesDB</h1>
         <p>Gestión de Credenciales y Domótica</p>
+        <a href="/configuracion" className="settings-link">⚙️ Configuración</a>
       </header>
 
       <div className="dashboard-grid">
