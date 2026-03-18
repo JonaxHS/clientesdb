@@ -5,7 +5,7 @@ services:
     volumes:
       - db_data:/app/prisma
     environment:
-      - DATABASE_URL=file:/app/prisma/dev.db
+      - DATABASE_URL=file:///app/prisma/dev.db
       - NODE_ENV=production
     healthcheck:
       test: [ "CMD", "node", "-e", "require('http').get('http://localhost:3000/api/clients', r => process.exit(r.statusCode >= 200 ? 0 : 1)).on('error', () => process.exit(1))" ]
