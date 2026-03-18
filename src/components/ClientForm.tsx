@@ -4,14 +4,13 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 
-// Import MapPicker dynamically so it only loads on the client side (Leaflet requires window)
 const MapPicker = dynamic(() => import('./MapPicker'), { ssr: false });
 
 export default function ClientForm() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [geoStatus, setGeoStatus] = useState('');
-    const [showMap, setShowMap] = useState(false);
+    const [showMap, setShowMap] = useState(true); // Show map by default
 
     const [formData, setFormData] = useState({
         name: '',
@@ -28,10 +27,18 @@ export default function ClientForm() {
 
     const obtainAutoLocation = () => {
         if (!navigator.geolocation) {
-            setGeoStatus('Geolocalización no soportada en tu navegador.');
+            setGeoStatus('❌ Geolocalización no soportada. Usa el mapa.');
+            setShowMap(true);
             return;
         }
-        setGeoStatus('Obteniendo ubicación...');
+        // Check if we're on HTTP (not HTTPS or localhost) - geolocation won't work
+        const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost';
+        if (!isSecure) {
+            setGeoStatus('⚠️ La detección automática requiere HTTPS. Selecciona en el mapa.');
+            setShowMap(true);
+            return;
+        }
+        setGeoStatus('📍 Obteniendo ubicación...');
         navigator.geolocation.getCurrentPosition(
             (position) => {
                 setFormData(prev => ({
@@ -39,19 +46,18 @@ export default function ClientForm() {
                     latitude: position.coords.latitude.toString(),
                     longitude: position.coords.longitude.toString()
                 }));
-                setGeoStatus('¡Ubicación detectada!');
+                setGeoStatus('✅ ¡Ubicación detectada!');
             },
-            (error) => {
-                console.error(error);
-                setGeoStatus('Error obteniendo ubicación. Usa el mapa manual.');
-                setShowMap(true); // Automatically show map if auto fails
+            () => {
+                setGeoStatus('❌ Error. Selecciona tu ubicación en el mapa.');
+                setShowMap(true);
             }
         );
     };
 
     const handleMapLocation = (lat: number, lng: number) => {
         setFormData(prev => ({ ...prev, latitude: lat.toString(), longitude: lng.toString() }));
-        setGeoStatus('Ubicación seleccionada en mapa.');
+        setGeoStatus('✅ Ubicación seleccionada en mapa.');
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -69,13 +75,11 @@ export default function ClientForm() {
                     google_email: '', google_pass: '', ewelink_user: '',
                     ewelink_pass: '', domotics_notes: '', latitude: '', longitude: ''
                 });
-                setGeoStatus('Cliente guardado con éxito.');
-                setShowMap(false);
+                setGeoStatus('');
                 router.refresh();
             }
         } catch (err) {
             console.error(err);
-            setGeoStatus('Error al guardar cliente.');
         } finally {
             setLoading(false);
         }
@@ -84,14 +88,14 @@ export default function ClientForm() {
     return (
         <form onSubmit={handleSubmit} className="client-form">
             <div className="form-group full-width">
-                <label>Nombre del Cliente o Proyecto *</label>
-                <input type="text" name="name" required value={formData.name} onChange={handleChange} />
+                <label>Nombre / Proyecto <span className="optional-tag">opcional</span></label>
+                <input type="text" name="name" value={formData.name} onChange={handleChange} placeholder="Ej: Casa García, Oficina 3B..." />
             </div>
 
             <div className="form-row">
                 <div className="form-group">
                     <label>Hikvision Usuario</label>
-                    <input type="text" name="hikvision_user" value={formData.hikvision_user} onChange={handleChange} />
+                    <input type="text" name="hikvision_user" value={formData.hikvision_user} onChange={handleChange} placeholder="admin" />
                 </div>
                 <div className="form-group">
                     <label>Hikvision Contraseña</label>
@@ -102,7 +106,7 @@ export default function ClientForm() {
             <div className="form-row">
                 <div className="form-group">
                     <label>Google Correo</label>
-                    <input type="email" name="google_email" value={formData.google_email} onChange={handleChange} />
+                    <input type="email" name="google_email" value={formData.google_email} onChange={handleChange} placeholder="correo@gmail.com" />
                 </div>
                 <div className="form-group">
                     <label>Google Contraseña</label>
@@ -123,19 +127,20 @@ export default function ClientForm() {
 
             <div className="form-group full-width">
                 <label>Notas Extra Domótica</label>
-                <textarea name="domotics_notes" value={formData.domotics_notes} onChange={handleChange} rows={3}></textarea>
+                <textarea name="domotics_notes" value={formData.domotics_notes} onChange={handleChange} rows={2} placeholder="Contraseñas WiFi, notas adicionales..."></textarea>
             </div>
 
             <div className="location-section full-width card-inner">
-                <h3>Geolocalización</h3>
-
-                <div className="location-actions">
-                    <button type="button" onClick={obtainAutoLocation} className="button-primary">
-                        📍 Auto Detectar Ubicación
-                    </button>
-                    <button type="button" onClick={() => setShowMap(!showMap)} className="button-secondary">
-                        🗺️ Usar Mapa Manual
-                    </button>
+                <div className="location-header">
+                    <h3>📍 Geolocalización</h3>
+                    <div className="location-actions">
+                        <button type="button" onClick={obtainAutoLocation} className="button-primary btn-sm">
+                            Auto Detectar
+                        </button>
+                        <button type="button" onClick={() => setShowMap(!showMap)} className="button-secondary btn-sm">
+                            {showMap ? 'Ocultar Mapa' : 'Ver Mapa'}
+                        </button>
+                    </div>
                 </div>
 
                 {geoStatus && <p className="status-message">{geoStatus}</p>}
@@ -143,11 +148,11 @@ export default function ClientForm() {
                 <div className="form-row coords-preview">
                     <div className="form-group">
                         <label>Latitud</label>
-                        <input type="text" name="latitude" readOnly value={formData.latitude} />
+                        <input type="text" name="latitude" readOnly value={formData.latitude} placeholder="Selecciona en el mapa" />
                     </div>
                     <div className="form-group">
                         <label>Longitud</label>
-                        <input type="text" name="longitude" readOnly value={formData.longitude} />
+                        <input type="text" name="longitude" readOnly value={formData.longitude} placeholder="Selecciona en el mapa" />
                     </div>
                 </div>
 
@@ -163,7 +168,7 @@ export default function ClientForm() {
             </div>
 
             <button type="submit" disabled={loading} className="submit-button full-width">
-                {loading ? 'Guardando...' : 'Guardar Cliente'}
+                {loading ? 'Guardando...' : '💾 Guardar Cliente'}
             </button>
         </form>
     );

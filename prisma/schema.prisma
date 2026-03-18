@@ -10,7 +10,7 @@ datasource db {
 
 model Client {
   id             String   @id @default(uuid())
-  name           String
+  name           String?
   hikvision_user String?
   hikvision_pass String?
   google_email   String?
