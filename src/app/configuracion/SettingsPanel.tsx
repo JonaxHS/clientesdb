@@ -121,13 +121,13 @@ export default function SettingsPanel() {
                 </div>
                 {showSslHelp && (
                     <div className="ssl-steps">
-                        <p className="settings-desc">Caddy se encarga de contactar a Let's Encrypt y generar los certificados por ti automáticamente. Solo asegúrate de:</p>
+                        <p className="settings-desc">Caddy se encarga de contactar a Let&apos;s Encrypt y generar los certificados por ti automáticamente. Solo asegúrate de:</p>
 
                         <div className="ssl-step">
                             <span className="step-number">1</span>
                             <div>
                                 <strong>Tu dominio debe apuntar a la IP de este VPS</strong>
-                                <p>Crea el registro tipo "A" en tu proveedor DNS y espera a que propague.</p>
+                                <p>Crea el registro tipo &quot;A&quot; en tu proveedor DNS y espera a que propague.</p>
                             </div>
                         </div>
 
@@ -143,7 +143,7 @@ export default function SettingsPanel() {
                             <span className="step-number">3</span>
                             <div>
                                 <strong>Activa SSL Arriba ↑ y Reinicia</strong>
-                                <p>Marca la casilla "Habilitar SSL" y guarda. Luego ejecuta <code>docker compose restart caddy</code> en tu VPS.</p>
+                                <p>Marca la casilla &quot;Habilitar SSL&quot; y guarda. Luego ejecuta <code>docker compose restart caddy</code> en tu VPS.</p>
                             </div>
                         </div>
                     </div>
