@@ -130,7 +130,7 @@ export default function ClientForm() {
 
                 {formData.accounts.length === 0 ? (
                     <p style={{ color: '#666', fontStyle: 'italic', fontSize: '0.9rem', textAlign: 'center', padding: '1rem', background: '#f8f9fa', borderRadius: '4px' }}>
-                        No hay cuentas agregadas. Haz clic en "Añadir Cuenta".
+                        No hay cuentas agregadas. Haz clic en &quot;Añadir Cuenta&quot;.
                     </p>
                 ) : (
                     formData.accounts.map((acc, idx) => (
