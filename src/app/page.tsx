@@ -1,19 +1,7 @@
 import ClientForm from '@/components/ClientForm';
 import ClientList from '@/components/ClientList';
 
-async function getClients() {
-  try {
-    const res = await fetch('http://web:3000/api/clients', { cache: 'no-store' });
-    if (!res.ok) return [];
-    return res.json();
-  } catch {
-    return [];
-  }
-}
-
-export default async function Home() {
-  const clients = await getClients();
-
+export default function Home() {
   return (
     <main className="container">
       <header className="header">
@@ -30,8 +18,8 @@ export default async function Home() {
         </section>
 
         <section className="list-section card">
-          <h2>👥 Clientes <span className="count-badge">{clients.length}</span></h2>
-          <ClientList clients={clients} />
+          <h2>👥 Clientes</h2>
+          <ClientList />
         </section>
       </div>
     </main>
