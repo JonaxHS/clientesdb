@@ -28,4 +28,4 @@ ENV PORT 3000
 ENV HOSTNAME "0.0.0.0"
 
 # Generate Prisma client, push schema to DB, then start the server
-CMD npx prisma generate && npx prisma db push --accept-data-loss && node server.js
+CMD mkdir -p /app/prisma/data && npx prisma generate && npx prisma db push --accept-data-loss && node server.js

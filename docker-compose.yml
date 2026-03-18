@@ -3,10 +3,10 @@ services:
     build: .
     restart: unless-stopped
     volumes:
-      - db_data:/app/prisma
+      - db_data:/app/prisma/data
       - ./nginx:/app/nginx-config # web writes nginx configs here
     environment:
-      - DATABASE_URL=file:./prisma/dev.db
+      - DATABASE_URL=file:./data/dev.db
       - NODE_ENV=production
       - ADMIN_PASSWORD=Admin1234 # CAMBIA ESTO en produccion
     healthcheck:
