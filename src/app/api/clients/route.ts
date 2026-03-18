@@ -74,3 +74,18 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Failed to create client' }, { status: 500 });
     }
 }
+
+export async function DELETE(request: Request) {
+    try {
+        const url = new URL(request.url);
+        const id = url.searchParams.get('id');
+        if (!id) {
+            return NextResponse.json({ error: 'ID requerido' }, { status: 400 });
+        }
+        await prisma.client.delete({ where: { id } });
+        return NextResponse.json({ ok: true });
+    } catch (error) {
+        console.error('Failed to delete client', error);
+        return NextResponse.json({ error: 'Failed to delete client' }, { status: 500 });
+    }
+}
