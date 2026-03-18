@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { cookies } from 'next/headers';
 import { writeFileSync } from 'fs';
 import { getExpectedToken } from '@/lib/auth';
+import { generateNginxConf } from '@/lib/nginx';
 
 const prisma = new PrismaClient();
 export const dynamic = 'force-dynamic';
@@ -11,50 +12,6 @@ function isAuthenticated(): boolean {
     const cookieStore = cookies();
     const token = cookieStore.get('admin_session')?.value;
     return token === getExpectedToken();
-}
-
-export function generateNginxConf(domain: string, ssl: boolean): string {
-    const serverName = domain ? `    server_name ${domain};` : '    # server_name tudominio.com;';
-
-    if (!ssl || !domain) {
-        return `server {
-    listen 80;
-${serverName}
-
-    location / {
-        proxy_pass http://web:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-    }
-}`;
-    }
-
-    return `server {
-    listen 80;
-    server_name ${domain};
-    return 301 https://$host$request_uri;
-}
-
-server {
-    listen 443 ssl;
-    server_name ${domain};
-
-    ssl_certificate /etc/letsencrypt/live/${domain}/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/${domain}/privkey.pem;
-    ssl_protocols TLSv1.2 TLSv1.3;
-
-    location / {
-        proxy_pass http://web:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-    }
-}`;
 }
 
 export async function GET() {
