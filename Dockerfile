@@ -27,5 +27,5 @@ EXPOSE 3000
 ENV PORT 3000
 ENV HOSTNAME "0.0.0.0"
 
-# Push schema to DB (creates tables if not exist), then start the server
-CMD npx prisma db push --accept-data-loss && node server.js
+# Generate Prisma client, push schema to DB, then start the server
+CMD npx prisma generate && npx prisma db push --accept-data-loss && node server.js
