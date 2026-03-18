@@ -19,10 +19,11 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/node_modules ./node_modules
 
 EXPOSE 3000
 ENV PORT 3000
 ENV HOSTNAME "0.0.0.0"
 
-# Note: We run migrations and then start the server
-CMD npx prisma migrate deploy && node server.js
+# Push schema to DB (creates tables if not exist), then start the server
+CMD npx prisma db push --accept-data-loss && node server.js
