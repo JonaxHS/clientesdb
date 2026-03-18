@@ -1,12 +1,7 @@
 import { NextResponse } from 'next/server';
-import { createHash } from 'crypto';
+import { getExpectedToken } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
-
-export function getExpectedToken(): string {
-    const pass = process.env.ADMIN_PASSWORD || 'Admin1234';
-    return createHash('sha256').update(pass + '-clientesdb-2024').digest('hex');
-}
 
 // POST /api/auth => Login
 export async function POST(req: Request) {
@@ -21,7 +16,7 @@ export async function POST(req: Request) {
         res.cookies.set('admin_session', token, {
             httpOnly: true,
             path: '/',
-            maxAge: 60 * 60 * 24 * 7, // 7 días
+            maxAge: 60 * 60 * 24 * 7,
             sameSite: 'lax',
         });
         return res;

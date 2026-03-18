@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { cookies } from 'next/headers';
 import { writeFileSync } from 'fs';
-import { getExpectedToken } from '../auth/route';
+import { getExpectedToken } from '@/lib/auth';
 
 const prisma = new PrismaClient();
 export const dynamic = 'force-dynamic';
