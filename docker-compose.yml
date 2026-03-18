@@ -4,7 +4,7 @@ services:
     restart: unless-stopped
     volumes:
       - db_data:/app/prisma/data
-      - ./nginx:/app/nginx-config # web writes nginx configs here
+      - ./caddy:/app/caddy-config # web writes Caddyfile here
     environment:
       - DATABASE_URL=file:./data/dev.db
       - NODE_ENV=production
@@ -16,19 +16,21 @@ services:
       retries: 6
       start_period: 40s
 
-  nginx:
-    image: nginx:alpine
+  caddy:
+    image: caddy:alpine
+    restart: unless-stopped
     ports:
-      - "3001:80"
-      - "3443:443" # para SSL cuando lo configures
+      - "80:80"
+      - "443:443"
     volumes:
-      - ./nginx:/etc/nginx/conf.d:ro # nginx lee configs de aqui
-      - certbot_certs:/etc/letsencrypt:ro
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
     depends_on:
       web:
         condition: service_healthy
-    restart: unless-stopped
 
 volumes:
   db_data:
-  certbot_certs:
+  caddy_data:
+  caddy_config:
